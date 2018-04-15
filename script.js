@@ -155,12 +155,7 @@ function letsDoThis(error) {
         .text(function(d) { return d.id; });
 
     // Add Scatter (per person)
-    var personScatter = g.selectAll(".dots")
-        .data(people)
-        .enter().append("g")
-        .attr("class", "dots");
-
-    personScatter.selectAll(".dot")
+    person.selectAll(".person")
         .data(function(d) { return d.values; })
         .enter().append("circle")
         .attr("class", "dot")
