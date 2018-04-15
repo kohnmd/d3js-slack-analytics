@@ -151,15 +151,27 @@ function letsDoThis(error) {
         .attr("x", 3)
         .attr("dy", "0.35em")
         .style("font", "10px sans-serif")
-        .attr("fill", function(d) { return z(d.id); })
+        .attr("fill", function(d) {
+
+            // console.log(d.id);
+            // console.log(z(d.id));
+
+            return z(d.id);
+        })
         .text(function(d) { return d.id; });
 
     // Add Scatter (per person)
     person.selectAll(".person")
-        .data(function(d) { return d.values; })
+        .data(function(d) {
+            var values = d.values;
+            d.values.forEach(function(o) {
+                o.id = d.id;
+            });
+            return values;
+        })
         .enter().append("circle")
         .attr("class", "dot")
-        //.style("fill", function(d) { return z(d.id); })
+        .style("fill", function(d) { return z(d.id); })
         .attr("r", 3.5)
         .attr("cx", function(d) { return x(d.date); })
         .attr("cy", function(d) { return y(d.messages); });
