@@ -15,31 +15,78 @@ var line = d3.line()
     .x(function(d) { return x(d.date); })
     .y(function(d) { return y(d.messages); });
 
-d3.csv("data/Choozle Slack User Analytics Apr 11 2018.csv", function(data) {
-    var dates = [
-        parseTime('2018-04-01'),
-        parseTime('2018-03-28'),
-        parseTime('2018-04-11'),
-        parseTime('2018-04-22')
+var dates = [
+    '2017-12-08',
+    '2018-01-15',
+    '2018-01-23',
+    '2018-01-29',
+    '2018-02-05',
+    '2018-02-12',
+    '2018-02-21',
+    '2018-02-26',
+    '2018-03-12',
+    '2018-03-19',
+    '2018-03-26',
+    '2018-04-09'
 
-    ];
-    dates.sort(function(a,b) { return a - b; });
+];
 
-    var people = data.slice(0, 10).map(function(row) {
-        i = 0;
-        return {
-            id: row.Name,
-            values: dates.map(function(date) {
-                i++;
-                return {
-                    date: date,
-                    messages: parseInt(row.chats_sent) + (1000 * i)
+var queue = d3.queue();
+for (var i = 0; i < dates.length; i++) {
+    queue.defer(d3.csv, "/data/" + dates[i] + ".csv");
+}
+queue.await(letsDoThis);
+
+function letsDoThis(error) {
+    if(error) {
+        console.log(error);
+        return;
+    }
+
+    var people = [];
+
+    // Loop through all dates
+    for (var i = 1; i < arguments.length; i++) {
+        var date = parseTime(dates[i-1]);
+        var fileData = arguments[i];
+        fileData.forEach(function(person) {
+            var found = _.findKey(people, ['id', person.Name]);
+            var messages = parseInt(person.chats_sent);
+            var data = {
+                date: date,
+                messages: messages
+            };
+
+            if (typeof found != 'undefined') {
+                // Add new data to person's values
+                people[found].values.push(data);
+                if (people[found].max < messages) {
+                    people[found].max = messages;
                 }
-            })
-        }
+            } else {
+                // Add person to people
+                people.push({
+                    id: person.Name,
+                    max: messages,
+                    values: [data]
+                });
+            }
+        });
+    }
+
+    // Sort people by messages sent
+    people = _.orderBy(people, [function(o) { return o.max; }], ['desc']);
+    people = people.slice(0, 10);
+
+
+    // Sort each person's values by date.
+    // TODO Can this be done earlier? Obsolete if dates are in order before itterating through them.
+    people.forEach(function(person) {
+        delete person.max;
+        person.values = _.sortBy(person.values, 'date');
     });
 
-    x.domain([
+     x.domain([
         d3.min(people, function(person) { return d3.min(person.values, function(d) { return d.date; })}),
         d3.max(people, function(person) { return d3.max(person.values, function(d) { return d.date; })})
     ]);
@@ -100,10 +147,11 @@ d3.csv("data/Choozle Slack User Analytics Apr 11 2018.csv", function(data) {
 
     person.append("text")
         .datum(function(d) { return {id: d.id, value: d.values[d.values.length - 1]}; })
-        .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.messages) + ")"; })
+        .attr("transform", function(d) { return "translate(" + (x(d.value.date) + 5) + "," + y(d.value.messages) + ")"; })
         .attr("x", 3)
         .attr("dy", "0.35em")
         .style("font", "10px sans-serif")
+        .attr("fill", function(d) { return z(d.id); })
         .text(function(d) { return d.id; });
 
     // Add Scatter (per person)
@@ -116,7 +164,8 @@ d3.csv("data/Choozle Slack User Analytics Apr 11 2018.csv", function(data) {
         .data(function(d) { return d.values; })
         .enter().append("circle")
         .attr("class", "dot")
+        //.style("fill", function(d) { return z(d.id); })
         .attr("r", 3.5)
         .attr("cx", function(d) { return x(d.date); })
         .attr("cy", function(d) { return y(d.messages); });
-});
+}
